@@ -40,7 +40,7 @@ LanguageDetector >> languageProbabilitiesFor: aString [
 	words := aString validLowercaseWords.
 	
 	probabilities := (words collect: [ :word |
-		word -> (self languageProbabilitiesFor: word) ]) asDictionary.
+		word -> (self languageProbabilitiesForWord: word) ]) asDictionary.
 	
 	languageNames := wordFrequencies keys.
 	
@@ -51,7 +51,9 @@ LanguageDetector >> languageProbabilitiesFor: aString [
 		
 		languageName -> average ]) asDictionary.
 	
-	^ averageProbabilities 
+	averageProbabilities at: 'other' put: (1 - averageProbabilities values sum).
+	
+	^ (averageProbabilities associations sorted: [ :a :b | a value > b value ]) asOrderedDictionary
 ]
 
 { #category : #'as yet unclassified' }
@@ -76,12 +78,16 @@ LanguageDetector >> loadLanguages: aCollectionOfLanguageNames [
 { #category : #'loading language models' }
 LanguageDetector >> loadWordFrequenciesFor: aLanguageName [
 
-	| file row |
+	| file row frequencies |
 	file := self class languagesDirectory / (aLanguageName, '.csv').
 	
-	^ (file contents lines collect: [ :line |
+	frequencies := (file contents lines collect: [ :line |
 		row := line substrings: ','.
-		row first -> row second asInteger ]) asDictionary
+		row first -> row second asInteger ]) asOrderedDictionary.
+	
+	frequencies := frequencies select: [ :count | count >= 10 ].
+	
+	^ frequencies
 ]
 
 { #category : #'as yet unclassified' }
