@@ -2,63 +2,116 @@ Class {
 	#name : #LanguageDetector,
 	#superclass : #Object,
 	#instVars : [
-		'languageModels'
+		'wordFrequencies'
 	],
 	#category : #LanguageDetector
 }
 
 { #category : #'as yet unclassified' }
-LanguageDetector class >> languageModelDirectory [
+LanguageDetector class >> languagesDirectory [
 
-	^ 'pharo-local/iceberg/olekscode/LanguageDetector/language-models/' asFileReference
+	^ 'pharo-local/iceberg/olekscode/LanguageDetector/languages/' asFileReference
 ]
 
 { #category : #initialization }
 LanguageDetector >> availableLanguages [
 
-	^ self class languageModelDirectory files collect: [ :each | each basenameWithoutExtension ]
+	^ self class languagesDirectory files collect: [ :each | each basenameWithoutExtension ]
 ]
 
 { #category : #initialization }
 LanguageDetector >> initialize [ 
 	super initialize.
-	languageModels := Dictionary new.
+	wordFrequencies := Dictionary new.
 	
-	self loadLanguageModels: self availableLanguages.
+	self loadLanguages: self availableLanguages.
 ]
 
 { #category : #'as yet unclassified' }
-LanguageDetector >> languageOf: aString [
+LanguageDetector >> languageOfWord: aWord [
 
-	^ (self logProbabilitiesOf: aString) keys first
+	^ (self languageProbabilitiesForWord: aWord) keys first
 ]
 
-{ #category : #'loading language models' }
-LanguageDetector >> loadLanguageModel: aLanguageName [
+{ #category : #'as yet unclassified' }
+LanguageDetector >> languageProbabilitiesForWord: aWord [
 
-	| file |
-	file := self class languageModelDirectory / (aLanguageName, '.ston').
-	^ NgramModel readFromFile: file.
+	| probabilities |
+	
+	probabilities := wordFrequencies keys collect: [ :languageName |
+		languageName -> (self probabilityOfLanguage: languageName forWord: aWord) ].
+	
+	probabilities sort: [ :a :b | a value > b value ].
+	^ probabilities asOrderedDictionary.
 ]
 
 { #category : #initialization }
-LanguageDetector >> loadLanguageModels: aCollectionOfLanguageNames [
+LanguageDetector >> loadLanguages: aCollectionOfLanguageNames [
 
 	aCollectionOfLanguageNames do: [ :languageName |
-		languageModels at: languageName put: (self loadLanguageModel: languageName) ]
+		wordFrequencies at: languageName put: (self loadWordFrequenciesFor: languageName) ]
+]
+
+{ #category : #'loading language models' }
+LanguageDetector >> loadWordFrequenciesFor: aLanguageName [
+
+	| file row |
+	file := self class languagesDirectory / (aLanguageName, '.csv').
+	
+	^ (file contents lines collect: [ :line |
+		row := line substrings: ','.
+		row first -> row second asInteger ]) asDictionary
 ]
 
 { #category : #'as yet unclassified' }
-LanguageDetector >> logProbabilitiesOf: aString [
+LanguageDetector >> probabilityOfLanguage: aLanguageName [
 
-	| cleanSentence characters logProbabilities |
-	cleanSentence := aString asCleanSentence.
-	characters := cleanSentence asOrderedCollection.
+	| languageWords wordsInAllLanguages |
 	
-	logProbabilities := OrderedCollection new.
+	languageWords := (wordFrequencies at: aLanguageName) values sum.
 	
-	languageModels keysAndValuesDo: [ :languageName :languageModel |
-		logProbabilities add: (languageName -> (languageModel logProbabilityOfText: characters)) ].
+	wordsInAllLanguages := wordFrequencies values inject: 0 into: [ :sum :frequencies |
+		sum + frequencies values sum ].
 	
-	^ (logProbabilities sorted: [ :a :b | a value > b value ]) asOrderedDictionary.
+	^ languageWords / wordsInAllLanguages
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> probabilityOfLanguage: aLanguageName forWord: aWord [
+
+	| probabilityOfWordInLanguage probabilityOfLanguage probabilityOfWord |
+	
+	probabilityOfWordInLanguage := self probabilityOfWord: aWord inLanguage: aLanguageName.
+	probabilityOfLanguage := self probabilityOfLanguage: aLanguageName.
+	probabilityOfWord := self probabilityOfWord: aWord.
+	
+	probabilityOfWord = 0 ifTrue: [ ^ 0 ].
+	
+	^ probabilityOfWordInLanguage * probabilityOfLanguage / probabilityOfWord asFloat
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> probabilityOfWord: aWord [
+
+	| countInAllLanguages wordsInAllLanguages |
+	
+	countInAllLanguages := wordFrequencies inject: 0 into: [ :sum :frequencies |
+		sum + (frequencies at: aWord ifAbsent: [ 0 ]) ].
+	
+	wordsInAllLanguages := wordFrequencies values inject: 0 into: [ :sum :frequencies |
+		sum + frequencies values sum ].
+	
+	^ countInAllLanguages / wordsInAllLanguages 
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> probabilityOfWord: aWord inLanguage: aLanguageName [
+
+	| frequencies count total |
+	frequencies := wordFrequencies at: aLanguageName.
+	
+	count := frequencies at: aWord ifAbsent: [ 0 ].
+	total := frequencies values sum.
+	
+	^ count / total
 ]
