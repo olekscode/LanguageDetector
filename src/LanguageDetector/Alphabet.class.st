@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+Alphabet class >> dutch [
+
+	^ self english
+]
+
+{ #category : #'as yet unclassified' }
 Alphabet class >> english [
 
 	^ 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -14,6 +20,12 @@ Alphabet class >> english [
 Alphabet class >> french [
 
 	^ 'AÀÂÆBCÇDEÉÈÊËFGHIÎÏJKLMNOÔŒPQRSTUÙÛÜVWXYŸZaàâæbcçdeéèêëfghiîïjklmnoôœpqrstuùûüvwxyÿz'
+]
+
+{ #category : #'as yet unclassified' }
+Alphabet class >> german [
+
+	^ 'AÄBCDEFGHIJKLMNOÖPQRSẞTUÜVWXYZaäbcdefghijklmnoöpqrsßtuüvwxyz'
 ]
 
 { #category : #'as yet unclassified' }

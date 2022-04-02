@@ -61,13 +61,31 @@ WordFrequenciesCalculator >> initialize [
 ]
 
 { #category : #'as yet unclassified' }
-WordFrequenciesCalculator >> saveToCsv: aFileReference [
+WordFrequenciesCalculator >> saveFrequencies: aDictionary toCsv: aFileReference [
 
 	aFileReference writeStreamDo: [ :stream |
-		frequencies keysAndValuesDo: [ :word :count |
+		aDictionary keysAndValuesDo: [ :word :count |
 			stream
 				nextPutAll: word;
 				nextPut: $,;
 				nextPutAll: count asString;
 				cr ] ].
+]
+
+{ #category : #'as yet unclassified' }
+WordFrequenciesCalculator >> saveToCsv: aFileReference [
+
+	self saveFrequencies: frequencies toCsv: aFileReference
+]
+
+{ #category : #'as yet unclassified' }
+WordFrequenciesCalculator >> saveTop: aNumber toCsv: aFileReference [
+
+	| topWords topWordFrequencies |
+	topWords := frequencies keys first: aNumber.
+	
+	topWordFrequencies := (topWords collect: [ :word |
+		word -> (frequencies at: word) ]) asOrderedDictionary.
+	
+	self saveFrequencies: topWordFrequencies toCsv: aFileReference
 ]
