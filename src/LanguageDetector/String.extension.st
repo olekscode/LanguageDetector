@@ -1,19 +1,18 @@
 Extension { #name : #String }
 
 { #category : #'*LanguageDetector' }
-String >> asCleanSentence [
-	"Convert to lowercase, replace all whitespaces with spaces, split identifier names into words, remove all non-alphabetic characters"
+String >> validLowercaseWords [
+	"Split into words, convert to lowercase, remove all non-alphabetic characters"
 	
-	| tokens words |
-
-	tokens := self substrings.
-	tokens := tokens flatCollect: [ :token | token splitIdentifierName ].
+	| words |
+	words := self substrings.
 	
-	words := tokens
-		select: [ :token | token allSatisfy: [ :character | character isLetter ] ]
-		thenCollect: [ :word | word asLowercase ].
-	
-	^ ' ' join: words
+	words := words
+		collect: [ :word | word select: [ :c | c isLetter ] ]
+		thenSelect: [ :word | word isNotEmpty ].
+		
+	words := words collect: [ :word | word asLowercase ].
+	^ words
 	
 	
 ]

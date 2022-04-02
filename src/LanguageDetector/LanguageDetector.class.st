@@ -34,6 +34,27 @@ LanguageDetector >> languageOfWord: aWord [
 ]
 
 { #category : #'as yet unclassified' }
+LanguageDetector >> languageProbabilitiesFor: aString [
+
+	| words languageNames average probabilities averageProbabilities |
+	words := aString validLowercaseWords.
+	
+	probabilities := (words collect: [ :word |
+		word -> (self languageProbabilitiesFor: word) ]) asDictionary.
+	
+	languageNames := wordFrequencies keys.
+	
+	averageProbabilities := (languageNames collect: [ :languageName | 
+		average := 1 / words size * 
+			(words inject: 0 into: [ :sum :word |
+				sum + ((probabilities at: word) at: languageName) ]).
+		
+		languageName -> average ]) asDictionary.
+	
+	^ averageProbabilities 
+]
+
+{ #category : #'as yet unclassified' }
 LanguageDetector >> languageProbabilitiesForWord: aWord [
 
 	| probabilities |
