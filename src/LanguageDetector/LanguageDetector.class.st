@@ -2,7 +2,9 @@ Class {
 	#name : #LanguageDetector,
 	#superclass : #Object,
 	#instVars : [
-		'wordFrequencies'
+		'wordFrequencies',
+		'priorLanguageProbabilities',
+		'wordsPerLanguage'
 	],
 	#category : #LanguageDetector
 }
@@ -16,7 +18,44 @@ LanguageDetector class >> languagesDirectory [
 { #category : #initialization }
 LanguageDetector >> availableLanguages [
 
-	^ self class languagesDirectory files collect: [ :each | each basenameWithoutExtension ]
+	^ self class languagesDirectory files
+		select: [ :file | file extension = 'csv' ]
+		thenCollect: [ :file | file basenameWithoutExtension ]
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> calculateNumberOfWordsInLanguage: aLanguageName [
+	"Total number of word occurences, not just the number of words in a dictionary"
+	
+	^ (wordFrequencies at: aLanguageName) values sum.
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> calculateNumberOfWordsInLanguages [
+	"Total number of word occurences, not just the number of words in a dictionary"
+	
+	wordsPerLanguage := (self languageNames collect: [ :languageName |
+		languageName -> (self calculateNumberOfWordsInLanguage: languageName) ]) asDictionary
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> calculatePriorLanguageProbabilities [
+
+	priorLanguageProbabilities := (self languageNames collect: [ :languageName |
+		languageName -> (self calculatePriorLanguageProbabilityOf: languageName) ]) asDictionary
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> calculatePriorLanguageProbabilityOf: aLanguageName [
+
+	| languageWords wordsInAllLanguages |
+	
+	languageWords := (wordFrequencies at: aLanguageName) values sum.
+	
+	wordsInAllLanguages := wordFrequencies values inject: 0 into: [ :sum :frequencies |
+		sum + frequencies values sum ].
+	
+	^ languageWords / wordsInAllLanguages
 ]
 
 { #category : #initialization }
@@ -25,6 +64,15 @@ LanguageDetector >> initialize [
 	wordFrequencies := Dictionary new.
 	
 	self loadLanguages: self availableLanguages.
+	
+	self calculatePriorLanguageProbabilities.
+	self calculateNumberOfWordsInLanguages.
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> languageNames [
+
+	^ wordFrequencies keys
 ]
 
 { #category : #'as yet unclassified' }
@@ -39,12 +87,12 @@ LanguageDetector >> languageProbabilitiesFor: aString [
 	| words languageNames average probabilities averageProbabilities |
 	
 	words := aString validLowercaseWords.
-	languageNames := wordFrequencies keys.
+	languageNames := self languageNames.
 	
 	words ifEmpty: [
 		^ (languageNames collect: [ :languageName | languageName -> 0.0 ]) asOrderedDictionary ].
 	
-	probabilities := (1 to: words size) collect: [ :word |
+	probabilities := words collect: [ :word |
 		self languageProbabilitiesForWord: word ].
 	
 	averageProbabilities := (languageNames collect: [ :languageName | 
@@ -64,7 +112,7 @@ LanguageDetector >> languageProbabilitiesForWord: aWord [
 
 	| probabilities |
 	
-	probabilities := wordFrequencies keys collect: [ :languageName |
+	probabilities := self languageNames collect: [ :languageName |
 		languageName -> (self probabilityOfLanguage: languageName forWord: aWord) ].
 	
 	probabilities sort: [ :a :b | a value > b value ].
@@ -94,16 +142,34 @@ LanguageDetector >> loadWordFrequenciesFor: aLanguageName [
 ]
 
 { #category : #'as yet unclassified' }
-LanguageDetector >> probabilityOfLanguage: aLanguageName [
+LanguageDetector >> numberOfWordsInAllLanguages [
+	"Total number of word occurences, not just the number of words in a dictionary"
 
-	| languageWords wordsInAllLanguages |
+	^ wordsPerLanguage values sum
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> numberOfWordsInLanguage: aLanguageName [
+	"Total number of word occurences, not just the number of words in a dictionary"
+
+	^ wordsPerLanguage at: aLanguageName
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> priorProbabilityOfLanguage: aLanguageName [
+
+	^ priorLanguageProbabilities at: aLanguageName
+]
+
+{ #category : #'as yet unclassified' }
+LanguageDetector >> priorProbabilityOfWord: aWord [
+
+	| countInAllLanguages |
 	
-	languageWords := (wordFrequencies at: aLanguageName) values sum.
+	countInAllLanguages := wordFrequencies inject: 0 into: [ :sum :frequencies |
+		sum + (frequencies at: aWord ifAbsent: [ 0 ]) ].
 	
-	wordsInAllLanguages := wordFrequencies values inject: 0 into: [ :sum :frequencies |
-		sum + frequencies values sum ].
-	
-	^ languageWords / wordsInAllLanguages
+	^ countInAllLanguages / self numberOfWordsInAllLanguages 
 ]
 
 { #category : #'as yet unclassified' }
@@ -112,26 +178,12 @@ LanguageDetector >> probabilityOfLanguage: aLanguageName forWord: aWord [
 	| probabilityOfWordInLanguage probabilityOfLanguage probabilityOfWord |
 	
 	probabilityOfWordInLanguage := self probabilityOfWord: aWord inLanguage: aLanguageName.
-	probabilityOfLanguage := self probabilityOfLanguage: aLanguageName.
-	probabilityOfWord := self probabilityOfWord: aWord.
+	probabilityOfLanguage := self priorProbabilityOfLanguage: aLanguageName.
+	probabilityOfWord := self priorProbabilityOfWord: aWord.
 	
 	probabilityOfWord = 0 ifTrue: [ ^ 0 ].
 	
 	^ probabilityOfWordInLanguage * probabilityOfLanguage / probabilityOfWord asFloat
-]
-
-{ #category : #'as yet unclassified' }
-LanguageDetector >> probabilityOfWord: aWord [
-
-	| countInAllLanguages wordsInAllLanguages |
-	
-	countInAllLanguages := wordFrequencies inject: 0 into: [ :sum :frequencies |
-		sum + (frequencies at: aWord ifAbsent: [ 0 ]) ].
-	
-	wordsInAllLanguages := wordFrequencies values inject: 0 into: [ :sum :frequencies |
-		sum + frequencies values sum ].
-	
-	^ countInAllLanguages / wordsInAllLanguages 
 ]
 
 { #category : #'as yet unclassified' }
@@ -141,7 +193,7 @@ LanguageDetector >> probabilityOfWord: aWord inLanguage: aLanguageName [
 	frequencies := wordFrequencies at: aLanguageName.
 	
 	count := frequencies at: aWord ifAbsent: [ 0 ].
-	total := frequencies values sum.
+	total := self numberOfWordsInLanguage: aLanguageName.
 	
 	^ count / total
 ]
