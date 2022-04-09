@@ -28,3 +28,20 @@ spec
 ```
 
 ## How to use it
+
+```Smalltalk
+detector := LanguageDetector new.
+
+detector languageProbabilitiesFor: 'Hello world!'.
+"an OrderedDictionary(
+    'english'->0.9486880624525642
+    'spanish'->0.01951642632549062
+    'german'->0.017971375908055948
+    'french'->0.01382413531388919
+    'other'->0.0)"
+
+detector languageOf: 'Hello world!'. "'english'"
+detector languageOf: 'Bonjour, ça va ?'. "'french'"
+detector languageOf: 'Ich heiße Hans'. "'german'"
+detector languageOf: 'Yo como los platanos'. "'spanish'"
+```
