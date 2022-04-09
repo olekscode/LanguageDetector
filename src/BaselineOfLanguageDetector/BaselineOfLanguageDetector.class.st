@@ -7,9 +7,14 @@ Class {
 { #category : #baselines }
 BaselineOfLanguageDetector >> baseline: spec [
 	<baseline>
-	spec for: #common do: [	
+	spec for: #common do: [
+		"External dependencies"
+		spec
+			baseline: 'WordFrequenciesCounter'
+			with: [ spec repository: 'github://olekscode/WordFrequenciesCounter/src' ].
+				
 		"Packages"
 		spec 
-			package: 'LanguageDetector';
+			package: 'LanguageDetector' with: [ spec requires: #('WordFrequenciesCounter') ];
 			package: 'LanguageDetector-Tests' with: [ spec requires: #('LanguageDetector') ] ].
 ]
