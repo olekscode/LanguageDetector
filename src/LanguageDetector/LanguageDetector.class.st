@@ -79,6 +79,12 @@ LanguageDetector >> languageNames [
 ]
 
 { #category : #'as yet unclassified' }
+LanguageDetector >> languageOf: aString [
+
+	^ (self languageProbabilitiesFor: aString) keys first
+]
+
+{ #category : #'as yet unclassified' }
 LanguageDetector >> languageOfWord: aWord [
 
 	^ (self languageProbabilitiesForWord: aWord) keys first
