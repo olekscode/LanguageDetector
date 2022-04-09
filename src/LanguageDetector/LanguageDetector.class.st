@@ -2,6 +2,7 @@ Class {
 	#name : #LanguageDetector,
 	#superclass : #Object,
 	#instVars : [
+		'tokenizer',
 		'wordFrequencies',
 		'priorLanguageProbabilities',
 		'wordsPerLanguage'
@@ -61,6 +62,8 @@ LanguageDetector >> calculatePriorLanguageProbabilityOf: aLanguageName [
 { #category : #initialization }
 LanguageDetector >> initialize [ 
 	super initialize.
+	
+	tokenizer := WordTokenizer new.
 	wordFrequencies := Dictionary new.
 	
 	self loadLanguages: self availableLanguages.
@@ -86,7 +89,7 @@ LanguageDetector >> languageProbabilitiesFor: aString [
 
 	| words languageNames average probabilities averageProbabilities |
 	
-	words := aString validLowercaseWords.
+	words := tokenizer tokenize: aString.
 	languageNames := self languageNames.
 	
 	words ifEmpty: [
